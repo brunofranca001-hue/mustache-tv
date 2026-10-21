@@ -1,0 +1,5 @@
+# Configuração local do Claude Code e cache do detector de design
+.claude/
+.impeccable/hook.cache.json
+tela-inicio/
+node_modules/

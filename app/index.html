@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920, height=1080">
+  <title>Início</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-tela="inicio">
+  <!-- Desenhos reutilizados: o bigode do Mustache TV e os ícones das trilhas (traço da biblioteca Lucide). -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="bigode" viewBox="0 0 120 44">
+      <path d="M60 15C53 5 40 2 29 9 21 14 15 24 6 22 3 21 1 23 2.5 26 10 36 27 39 40 33 48 29 55 25 60 25s12 4 20 8c13 6 30 3 37.5-7 1.5-3-.5-5-3.5-4-9 2-15-8-23-13C80 2 67 5 60 15Z"/>
+    </symbol>
+    <symbol id="ic-tv" viewBox="0 0 24 24"><rect width="20" height="15" x="2" y="7" rx="2"/><path d="m17 2-5 5-5-5"/></symbol>
+    <symbol id="ic-historico" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+    <symbol id="ic-radio" viewBox="0 0 24 24"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+  </svg>
+
+  <div id="papel"><img id="papel-a" alt=""><img id="papel-b" alt=""><div id="papel-veu"></div></div>
+
+  <header id="topo">
+    <div id="marca"><svg><use href="#bigode"></use></svg><span>Mustache TV</span></div>
+    <div id="relogio">--:--</div>
+  </header>
+
+  <main id="trilhas"><div id="trilhas-faixa"></div></main>
+
+  <p id="credito">Foto: Unsplash</p>
+
+  <div id="player" hidden>
+    <video id="video" autoplay playsinline></video>
+    <div id="player-info">
+      <div id="player-logo-caixa"><img id="player-logo" alt=""></div>
+      <div>
+        <h2 id="player-nome"></h2>
+        <p id="player-status"><i id="player-ponto"></i><span id="player-texto"></span></p>
+      </div>
+      <svg id="player-marca"><use href="#bigode"></use></svg>
+    </div>
+  </div>
+
+  <div id="aviso" hidden></div>
+
+  <script src="main.js"></script>
+</body>
+</html>

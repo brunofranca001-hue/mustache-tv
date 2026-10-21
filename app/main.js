@@ -1,0 +1,461 @@
+// Tela inicial estilo Apple TV para Samsung Tizen (módulo do TizenBrew).
+// Duas telas: "inicio" (apps + últimos canais) e "mustache" (o app interno Mustache TV, com os canais).
+// Escrito sem `?.` e `??`: o navegador da TV é um Chromium mais antigo que o do PC.
+(function () {
+  'use strict';
+
+  var LISTA_CANAIS = 'https://iptv-org.github.io/iptv/countries/br.m3u';
+  var HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
+  var ICONES = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
+  var SERVICO = 'http://127.0.0.1:8086';
+  var CACHE_HORAS = 12;
+  var ESPERA_CANAL_MS = 15000;
+  var MAX_RECENTES = 12;
+
+  // Ordem e nomes em português das categorias da lista iptv-org.
+  var CATEGORIAS = [
+    ['General', 'Abertos'], ['News', 'Notícias'], ['Entertainment', 'Entretenimento'],
+    ['Movies', 'Filmes'], ['Series', 'Séries'], ['Kids', 'Infantil'], ['Sports', 'Esportes'],
+    ['Music', 'Música'], ['Documentary', 'Documentários'], ['Education', 'Educação'],
+    ['Culture', 'Cultura'], ['Lifestyle', 'Estilo de vida'], ['Legislative', 'Legislativo'],
+    ['Religious', 'Religiosos']
+  ];
+
+  var TECLA = {
+    esquerda: [37], direita: [39], cima: [38], baixo: [40], ok: [13],
+    voltar: [10009, 8, 27], canalMais: [427, 33], canalMenos: [428, 34], info: [457, 73]
+  };
+
+  var MUSTACHE = { nome: 'Mustache TV', interno: 'mustache', cor: '#2b1810', frase: 'Canais abertos ao vivo' };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var estado = {
+    apps: [], canais: null, recentes: lerSalvo('recentes') || [],
+    tela: 'inicio',
+    telas: { inicio: { trilhas: [], linha: 0, colunas: [] }, mustache: { trilhas: [], linha: 0, colunas: [] } },
+    tocando: null
+  };
+  function T() { return estado.telas[estado.tela]; }
+
+  // ---------------- Utilidades ----------------
+  function guardar(chave, valor) { try { localStorage.setItem(chave, JSON.stringify(valor)); } catch (err) {} }
+  function lerSalvo(chave) { try { return JSON.parse(localStorage.getItem(chave)); } catch (err) { return null; } }
+  function el(tag, classe, texto) {
+    var n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texto) n.textContent = texto;
+    return n;
+  }
+  function desenho(id) {
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    var use = document.createElementNS(ns, 'use');
+    use.setAttribute('href', '#' + id);
+    svg.appendChild(use);
+    return svg;
+  }
+
+  // ---------------- Papel de parede ----------------
+  // Duas <img> se alternando: a nova carrega escondida e só depois aparece por cima (sem piscar).
+  function iniciarPapel(cfg) {
+    var fotos = (cfg && cfg.fotos) || [];
+    if (!fotos.length) return;
+    var camadas = [$('papel-a'), $('papel-b')], vez = 0, i = Math.floor(Math.random() * fotos.length);
+    function proxima() {
+      var foto = fotos[i % fotos.length], nova = camadas[vez], velha = camadas[1 - vez];
+      nova.onload = function () {
+        nova.classList.add('on'); velha.classList.remove('on');
+        $('credito').textContent = foto.credito || '';
+      };
+      nova.onerror = function () { i++; setTimeout(proxima, 1000); };
+      nova.src = foto.src;
+      vez = 1 - vez; i++;
+    }
+    proxima();
+    if (fotos.length > 1) setInterval(proxima, (cfg.trocarACadaSegundos || 90) * 1000);
+  }
+  var timerAviso;
+  function avisar(texto) {
+    var a = $('aviso');
+    a.textContent = texto; a.hidden = false;
+    clearTimeout(timerAviso);
+    timerAviso = setTimeout(function () { a.hidden = true; }, 3500);
+  }
+  function tem(lista, codigo) { return lista.indexOf(codigo) >= 0; }
+
+  function relogio() {
+    var d = new Date();
+    $('relogio').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  // ---------------- Canais (iptv-org) ----------------
+  // Cada canal vem em duas linhas: "#EXTINF:-1 tvg-logo=".." group-title="..",Nome (720p) [Not 24/7]" e a URL.
+  function lerM3u(texto) {
+    var canais = [], atual = null;
+    texto.split(/\r?\n/).forEach(function (linha) {
+      linha = linha.trim();
+      if (linha.indexOf('#EXTINF') === 0) {
+        var attr = function (n) { var m = linha.match(new RegExp(n + '="([^"]*)"')); return m ? m[1] : ''; };
+        var nomeBruto = linha.slice(linha.lastIndexOf(',') + 1);
+        var grupo = attr('group-title').split(';')[0] || 'Undefined';
+        atual = {
+          nome: nomeBruto.replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim(),
+          logo: attr('tvg-logo'),
+          grupo: nomeDoGrupo(grupo),
+          grupoOriginal: grupo,
+          naoContinuo: /Not 24\/7/i.test(nomeBruto)
+        };
+      } else if (linha && linha[0] !== '#' && atual) {
+        atual.url = linha;
+        canais.push(atual);
+        atual = null;
+      }
+    });
+    return canais;
+  }
+
+  function nomeDoGrupo(g) {
+    for (var i = 0; i < CATEGORIAS.length; i++) if (CATEGORIAS[i][0] === g) return CATEGORIAS[i][1];
+    return 'Outros';
+  }
+
+  function buscarCanais() {
+    var cache = lerSalvo('canais-v2');
+    if (cache && Date.now() - cache.quando < CACHE_HORAS * 3600e3) return Promise.resolve(cache.canais);
+    return fetch(LISTA_CANAIS)
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .then(function (t) { var c = lerM3u(t); guardar('canais-v2', { quando: Date.now(), canais: c }); return c; })
+      .catch(function (err) { if (cache) return cache.canais; throw err; });
+  }
+
+  // ---------------- Montagem das telas ----------------
+  function montarInicio() {
+    var trilhas = [{ titulo: 'Apps', icone: 'ic-tv', tipo: 'app', itens: [MUSTACHE].concat(estado.apps) }];
+    if (estado.recentes.length) trilhas.push({ titulo: 'Assistidos há pouco', icone: 'ic-historico', tipo: 'canal', itens: estado.recentes, recentes: true });
+    estado.telas.inicio.trilhas = trilhas;
+  }
+
+  function montarMustache() {
+    var tela = estado.telas.mustache;
+    if (!estado.canais) {
+      tela.trilhas = [{ titulo: 'Canais', icone: 'ic-radio', tipo: 'canal', itens: [], vazio: estado.erroCanais || 'Carregando canais abertos…' }];
+      return;
+    }
+    var porGrupo = {};
+    estado.canais.forEach(function (c) { (porGrupo[c.grupo] = porGrupo[c.grupo] || []).push(c); });
+    var trilhas = [];
+    CATEGORIAS.concat([['', 'Outros']]).forEach(function (par) {
+      var itens = porGrupo[par[1]];
+      if (itens) trilhas.push({ titulo: par[1], icone: 'ic-radio', tipo: 'canal', itens: itens });
+    });
+    tela.trilhas = trilhas;
+  }
+
+  // ---------------- Desenho ----------------
+  // Rótulo que aparece embaixo do item em foco: nome + uma linha de contexto.
+  function rotulo(nome, sub, aoVivo) {
+    var r = el('div', 'rotulo');
+    r.appendChild(el('b', '', nome));
+    if (sub) {
+      var s = el('small');
+      if (aoVivo) s.appendChild(el('i', 'ponto-vivo'));
+      s.appendChild(document.createTextNode(sub));
+      r.appendChild(s);
+    }
+    return r;
+  }
+
+  function bannerDeApp(app) {
+    var c = el('div', 'cartao');
+    c.style.background = app.fundo;
+    c.style.color = app.frente;
+    if (app.logoImg) {                       // logo colorido pronto (arquivo da própria marca)
+      var img = el('img', 'logo-img' + (app.logoLargo ? ' largo' : ''));
+      img.alt = app.nome; img.src = app.logoImg;
+      img.onerror = function () { c.removeChild(img); c.appendChild(el('span', 'marca-txt', app.nome)); };
+      c.appendChild(img);
+      return c;
+    }
+    if (app.icone) {                         // logo de uma cor só, pintado por máscara
+      var g = el('span', 'glifo' + (app.iconeGrande ? ' grande' : '') + (app.iconeLargo ? ' largo' : ''));
+      g.style.setProperty('--glifo', 'url("' + ICONES + app.icone + '.svg")');
+      c.appendChild(g);
+    }
+    if (app.texto) {
+      var t = el('span', 'marca-txt' + (app.estilo ? ' ' + app.estilo : ''), app.texto);
+      if (app.textoCor) t.style.color = app.textoCor;
+      c.appendChild(t);
+    }
+    return c;
+  }
+
+  function desenharItem(trilha, item) {
+    var n, c;
+    if (trilha.tipo === 'app') {
+      n = el('div', 'item app');
+      if (item.interno === 'mustache') {
+        c = el('div', 'cartao app-mustache');
+        c.appendChild(desenho('bigode'));
+        c.appendChild(el('span', '', 'MUSTACHE TV'));
+        n.appendChild(c);
+        n.appendChild(rotulo(item.nome, estado.canais ? estado.canais.length + ' canais abertos ao vivo' : 'Canais abertos ao vivo'));
+        return n;
+      }
+      n.appendChild(bannerDeApp(item));
+      n.appendChild(rotulo(item.nome));
+      return n;
+    }
+    n = el('div', 'item canal');
+    c = el('div', 'cartao');
+    if (item.logo) {
+      var img = el('img');
+      img.alt = item.nome;
+      img.setAttribute('data-src', item.logo); // só carrega quando a trilha chega perto (economiza memória da TV)
+      img.onerror = function () { if (img.parentNode) img.parentNode.removeChild(img); c.appendChild(el('span', '', item.nome)); };
+      c.appendChild(img);
+    } else {
+      c.appendChild(el('span', '', item.nome));
+    }
+    n.appendChild(c);
+    n.appendChild(rotulo(item.nome, item.grupo + (item.naoContinuo ? ' · em alguns horários' : ' · ao vivo'), !item.naoContinuo));
+    return n;
+  }
+
+  function desenhar() {
+    var tela = T();
+    document.body.setAttribute('data-tela', estado.tela);
+    var faixa = $('trilhas-faixa');
+    while (faixa.firstChild) faixa.removeChild(faixa.firstChild);
+    tela.trilhas.forEach(function (t, i) {
+      var sec = el('section', 'trilha');
+      var h = el('h3');
+      if (t.icone) h.appendChild(desenho(t.icone));
+      h.appendChild(document.createTextNode(t.titulo));
+      sec.appendChild(h);
+      var itens = el('div', 'trilha-itens');
+      if (!t.itens.length) itens.appendChild(el('p', 'vazio', t.vazio || 'Nada por aqui.'));
+      t.itens.forEach(function (item) { itens.appendChild(desenharItem(t, item)); });
+      sec.appendChild(itens);
+      faixa.appendChild(sec);
+      if (tela.colunas[i] == null) tela.colunas[i] = 0;
+    });
+    if (tela.linha >= tela.trilhas.length) tela.linha = 0;
+    focar();
+  }
+
+  function carregarLogos(linha) {
+    var sec = $('trilhas-faixa').children[linha];
+    if (!sec) return;
+    var imgs = sec.querySelectorAll('img[data-src]');
+    for (var i = 0; i < imgs.length; i++) { imgs[i].src = imgs[i].getAttribute('data-src'); imgs[i].removeAttribute('data-src'); }
+  }
+
+  function focar() {
+    var tela = T();
+    var secs = $('trilhas-faixa').children;
+    var t = tela.trilhas[tela.linha];
+    if (!t) return;
+    var col = Math.min(tela.colunas[tela.linha], Math.max(0, t.itens.length - 1));
+    tela.colunas[tela.linha] = col;
+
+    for (var i = 0; i < secs.length; i++) {
+      secs[i].classList.toggle('ativa', i === tela.linha);
+      var antigo = secs[i].querySelector('.item.foco');
+      if (antigo) antigo.classList.remove('foco');
+    }
+    [tela.linha - 1, tela.linha, tela.linha + 1, tela.linha + 2].forEach(carregarLogos);
+
+    var sec = secs[tela.linha];
+    // Só rola o que não cabe: com poucas trilhas, todas ficam à vista.
+    var faixa = $('trilhas-faixa');
+    var sobra = Math.max(0, faixa.scrollHeight - $('trilhas').clientHeight);
+    faixa.style.transform = 'translateY(' + (-Math.min(sec.offsetTop, sobra)) + 'px)';
+
+    var itensEl = sec.querySelector('.trilha-itens');
+    var alvo = itensEl.children[col];
+    if (!alvo || !alvo.classList.contains('item')) return;
+    alvo.classList.add('foco');
+    // A trilha só anda quando o foco passa de 4 itens: os primeiros ficam parados, como na referência.
+    var ref = itensEl.children[Math.max(0, col - 3)];
+    itensEl.style.transform = 'translateX(' + (col > 3 ? -ref.offsetLeft : 0) + 'px)';
+  }
+
+  // ---------------- Navegação entre telas ----------------
+  function irPara(nome) {
+    estado.tela = nome;
+    if (nome === 'mustache') montarMustache(); else montarInicio();
+    desenhar();
+  }
+
+  // ---------------- Abrir apps ----------------
+  function abrirApp(app) {
+    if (app.interno === 'mustache') { irPara('mustache'); return; }
+    if (window.tizen && tizen.application) {
+      try {
+        tizen.application.launch(app.appId, function () {}, function () { abrirPeloServico(app); });
+        return;
+      } catch (err) { /* a página não tem a permissão: tenta pelo serviço */ }
+    }
+    abrirPeloServico(app);
+  }
+
+  function abrirPeloServico(app) {
+    fetch(SERVICO + '/launch?id=' + encodeURIComponent(app.appId))
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (!j.ok) avisar('Não consegui abrir ' + app.nome + '. Tente pelo menu da TV.'); })
+      .catch(function () { avisar('Na TV, isto abriria ' + app.nome); });
+  }
+
+  // ---------------- Player ----------------
+  var hls = null, timerCanal, timerInfo;
+
+  function carregarHlsJs() {
+    if (window.Hls) return Promise.resolve(window.Hls);
+    return new Promise(function (ok, falha) {
+      var s = document.createElement('script');
+      s.src = HLS_JS; s.onload = function () { ok(window.Hls); }; s.onerror = falha;
+      document.head.appendChild(s);
+    });
+  }
+
+  function status(texto, aoVivo) {
+    var info = $('player-info');
+    if (texto) $('player-texto').textContent = texto;
+    if (aoVivo != null) $('player').classList.toggle('vivo', aoVivo);
+    info.classList.remove('some');
+    clearTimeout(timerInfo);
+    timerInfo = setTimeout(function () { info.classList.add('some'); }, 4500);
+  }
+
+  function pararVideo() {
+    clearTimeout(timerCanal);
+    if (hls) { hls.destroy(); hls = null; }
+    var v = $('video');
+    v.onplaying = v.onerror = null;
+    v.pause(); v.removeAttribute('src'); v.load();
+  }
+
+  function lembrar(canal) {
+    estado.recentes = [canal].concat(estado.recentes.filter(function (c) { return c.url !== canal.url; })).slice(0, MAX_RECENTES);
+    guardar('recentes', estado.recentes);
+  }
+
+  function tocar(trilha, indice) {
+    var canal = trilha.itens[indice];
+    estado.tocando = { trilha: trilha, indice: indice, tela: estado.tela };
+    pararVideo();
+    $('player').hidden = false;
+    $('player-nome').textContent = canal.nome;
+    if (canal.logo) $('player-logo').src = canal.logo; else $('player-logo').removeAttribute('src');
+    status('Sintonizando · ' + (indice + 1) + ' de ' + trilha.itens.length + ' em ' + (trilha.titulo), false);
+
+    var v = $('video');
+    var foraDoAr = function () { clearTimeout(timerCanal); status('Fora do ar agora. Use ▲ ▼ para trocar de canal', false); };
+    timerCanal = setTimeout(foraDoAr, ESPERA_CANAL_MS);
+    v.onplaying = function () { clearTimeout(timerCanal); lembrar(canal); status(canal.grupo + ' · ao vivo', true); };
+    v.onerror = foraDoAr;
+
+    // A TV toca HLS (.m3u8) sozinha; o PC precisa do hls.js.
+    if (v.canPlayType('application/vnd.apple.mpegurl')) {
+      v.src = canal.url;
+      v.play().catch(function () {});
+      return;
+    }
+    carregarHlsJs().then(function (Hls) {
+      if (!estado.tocando || estado.tocando.trilha.itens[estado.tocando.indice] !== canal) return;
+      if (!Hls.isSupported()) { v.src = canal.url; return; }
+      hls = new Hls();
+      hls.on(Hls.Events.ERROR, function (_, d) { if (d.fatal) foraDoAr(); });
+      hls.loadSource(canal.url);
+      hls.attachMedia(v);
+      v.play().catch(function () {});
+    }).catch(function () { status('Não consegui carregar o player. Confira a internet.', false); });
+  }
+
+  function trocarCanal(passo) {
+    var t = estado.tocando.trilha, n = t.itens.length;
+    tocar(t, (estado.tocando.indice + passo + n) % n);
+  }
+
+  function fecharPlayer() {
+    var ultimo = estado.tocando;
+    pararVideo();
+    $('player').hidden = true;
+    estado.tocando = null;
+    estado.tela = ultimo.tela;
+    var tela = T();
+    if (estado.tela === 'inicio') {
+      // A trilha de recentes mudou de ordem: o canal assistido agora é o primeiro.
+      montarInicio();
+      var r = tela.trilhas.length - 1;
+      if (ultimo.trilha.recentes || tela.trilhas[r].recentes) { tela.linha = r; tela.colunas[r] = 0; }
+    } else {
+      var i = tela.trilhas.indexOf(ultimo.trilha);
+      if (i >= 0) { tela.linha = i; tela.colunas[i] = ultimo.indice; }
+    }
+    desenhar();
+  }
+
+  // ---------------- Controle remoto ----------------
+  function registrarTeclas() {
+    if (!(window.tizen && tizen.tvinputdevice)) return;
+    ['ChannelUp', 'ChannelDown', 'MediaPlayPause', 'Info'].forEach(function (k) {
+      try { tizen.tvinputdevice.registerKey(k); } catch (err) {}
+    });
+  }
+
+  document.addEventListener('keydown', function (ev) {
+    var k = ev.keyCode;
+    if (estado.tocando) {
+      if (tem(TECLA.voltar, k)) fecharPlayer();
+      else if (tem(TECLA.cima, k) || tem(TECLA.canalMais, k)) trocarCanal(1);
+      else if (tem(TECLA.baixo, k) || tem(TECLA.canalMenos, k)) trocarCanal(-1);
+      else if (tem(TECLA.ok, k) || tem(TECLA.info, k)) status();
+      else return;
+      ev.preventDefault();
+      return;
+    }
+
+    var tela = T();
+    var t = tela.trilhas[tela.linha];
+    if (!t) return;
+    if (tem(TECLA.direita, k)) tela.colunas[tela.linha] = Math.min(tela.colunas[tela.linha] + 1, t.itens.length - 1);
+    else if (tem(TECLA.esquerda, k)) tela.colunas[tela.linha] = Math.max(tela.colunas[tela.linha] - 1, 0);
+    else if (tem(TECLA.baixo, k)) tela.linha = Math.min(tela.linha + 1, tela.trilhas.length - 1);
+    else if (tem(TECLA.cima, k)) tela.linha = Math.max(tela.linha - 1, 0);
+    else if (tem(TECLA.ok, k)) {
+      var item = t.itens[tela.colunas[tela.linha]];
+      if (item) { if (t.tipo === 'app') abrirApp(item); else tocar(t, tela.colunas[tela.linha]); }
+      ev.preventDefault();
+      return;
+    } else if (tem(TECLA.voltar, k)) {
+      ev.preventDefault();
+      // No Mustache TV, voltar leva ao início com o foco no ícone dele; no início, sobe para os apps.
+      if (estado.tela === 'mustache') { estado.telas.inicio.linha = 0; estado.telas.inicio.colunas[0] = 0; irPara('inicio'); }
+      else { tela.linha = 0; focar(); }
+      return;
+    } else return;
+    ev.preventDefault();
+    focar();
+  });
+
+  // ---------------- Início ----------------
+  function iniciar() {
+    relogio(); setInterval(relogio, 15000);
+    registrarTeclas();
+
+    fetch('fundos.json').then(function (r) { return r.json(); }).then(iniciarPapel).catch(function () {});
+
+    fetch('apps.json')
+      .then(function (r) { return r.json(); })
+      .then(function (j) { estado.apps = j.apps; irPara('inicio'); })
+      .catch(function () { irPara('inicio'); avisar('Não consegui ler a lista de apps.'); });
+
+    buscarCanais()
+      .then(function (c) { estado.canais = c; })
+      .catch(function () { estado.erroCanais = 'Não consegui baixar a lista de canais. Confira a internet e abra de novo.'; })
+      .then(function () { if (!estado.tocando) { if (estado.tela === 'mustache') montarMustache(); if (estado.telas.inicio.trilhas.length) desenhar(); } });
+  }
+
+  iniciar();
+})();

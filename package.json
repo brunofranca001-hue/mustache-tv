@@ -1,0 +1,25 @@
+{
+  "name": "mustache-tv",
+  "appName": "Mustache TV",
+  "version": "0.1.0",
+  "description": "Tela inicial limpa, estilo Apple TV, com atalhos de apps e canais abertos (iptv-org).",
+  "packageType": "app",
+  "appPath": "app/index.html",
+  "serviceFile": "service/service.js",
+  "keys": [
+    "ChannelUp",
+    "ChannelDown",
+    "MediaPlayPause",
+    "MediaPlay",
+    "MediaPause",
+    "MediaStop",
+    "Info"
+  ],
+  "scripts": {
+    "dev": "node dev/servidor.mjs"
+  },
+  "repository": {
+    "url": "https://github.com/brunofranca001-hue/mustache-tv"
+  },
+  "license": "MIT"
+}

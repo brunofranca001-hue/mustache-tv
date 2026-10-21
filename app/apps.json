@@ -1,0 +1,13 @@
+{
+  "_leia": "appId com conferido=false é o código mais citado pela comunidade; será trocado pelo que a TV informar. icone = nome no Simple Icons; sem icone, o banner usa o texto da marca.",
+  "apps": [
+    { "nome": "YouTube",         "appId": "111299001912",  "fundo": "#ffffff", "frente": "#ff0033", "icone": "youtube",    "texto": "YouTube",   "textoCor": "#0f0f0f", "conferido": false },
+    { "nome": "Netflix",         "appId": "3201907018807", "fundo": "#000000", "frente": "#e50914", "texto": "NETFLIX",  "estilo": "condensado", "conferido": false },
+    { "nome": "Prime Video",     "appId": "3201910019365", "fundo": "#1a98ff", "frente": "#ffffff", "icone": "primevideo", "iconeGrande": true, "conferido": false },
+    { "nome": "Globoplay",       "appId": "3201908019041", "fundo": "#ffffff", "logoImg": "https://upload.wikimedia.org/wikipedia/commons/b/b0/Globoplay_logo_2020.svg", "logoLargo": true, "conferido": false },
+    { "nome": "Pluto TV",        "appId": "3201808016802", "fundo": "#000000", "logoImg": "https://upload.wikimedia.org/wikipedia/commons/c/c3/Pluto_TV_logo_2024.svg", "conferido": false },
+    { "nome": "Samsung TV Plus", "appId": "3201710015037", "fundo": "linear-gradient(135deg,#2a44d4,#1428a0)", "frente": "#ffffff", "icone": "samsung", "texto": "TV Plus", "iconeLargo": true, "conferido": false },
+    { "nome": "Plex",            "appId": "3201512006963", "fundo": "#1f1f1f", "frente": "#ebaf00", "icone": "plex", "texto": "plex", "textoCor": "#ffffff", "estilo": "minusculo", "conferido": false },
+    { "nome": "Spotify",         "appId": "3201606009684", "fundo": "#121212", "frente": "#1ed760", "icone": "spotify", "texto": "Spotify", "textoCor": "#ffffff", "conferido": false }
+  ]
+}
