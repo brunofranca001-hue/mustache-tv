@@ -6,17 +6,25 @@ var http = require('http');
 var url = require('url');
 
 var PORTA = 8086;
+// A página do módulo é servida pelo TizenBrew neste endereço. Só ela pode pedir para abrir apps:
+// qualquer outra página aberta na TV (um site no TizenBrew, por exemplo) é recusada.
+var ORIGEM_DO_MODULO = 'http://127.0.0.1:8081';
 
 function responder(res, status, corpo) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*'
+    'Access-Control-Allow-Origin': ORIGEM_DO_MODULO,
+    'Vary': 'Origin'
   });
   res.end(JSON.stringify(corpo));
 }
 
 var servidor = http.createServer(function (req, res) {
   var pedido = url.parse(req.url, true);
+
+  // O navegador sempre manda "Origin" num fetch entre portas diferentes (8081 -> 8086).
+  // Sem Origin, ou com outra, o pedido não veio da nossa página (pode ser um <img> ou outro site).
+  if (req.headers.origin !== ORIGEM_DO_MODULO) return responder(res, 403, { ok: false, erro: 'origem não permitida' });
 
   if (pedido.pathname === '/ping') return responder(res, 200, { ok: true });
 
