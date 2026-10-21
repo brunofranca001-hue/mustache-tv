@@ -1,19 +1,20 @@
 {
   "name": "mustache-tv",
   "appName": "Mustache TV",
-  "version": "0.2.0",
-  "description": "Toca os seus próprios streams e vídeos (lista em app/meus-canais.json) em TVs Samsung, como módulo do TizenBrew.",
-  "packageType": "app",
-  "appPath": "app/index.html",
-  "serviceFile": "service/service.js",
+  "version": "1.0.0",
+  "description": "Mustache TV: atalho do TizenBrew que abre o Saimo TV na TV Samsung.",
+  "packageType": "mods",
+  "websiteURL": "https://saimo-tv.pages.dev/",
+  "main": "atalho.js",
   "keys": [
-    "ChannelUp",
-    "ChannelDown",
     "MediaPlayPause",
     "MediaPlay",
     "MediaPause",
     "MediaStop",
-    "Info"
+    "MediaFastForward",
+    "MediaRewind",
+    "ChannelUp",
+    "ChannelDown"
   ],
   "scripts": {
     "dev": "node dev/servidor.mjs"

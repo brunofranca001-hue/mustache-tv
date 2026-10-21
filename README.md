@@ -1,12 +1,14 @@
 # Mustache TV
 
-App para TVs Samsung (Tizen) que toca **os seus próprios streams e vídeos**, listados em
-`app/meus-canais.json`, em trilhas por grupo, com fundo de paisagem e a trilha
-"Assistidos há pouco". Use ▲ ▼ ou CH+/CH− para trocar de canal.
+Desde a **v1.0.0**, o Mustache TV é um atalho do TizenBrew: abre o site
+[Saimo TV](https://saimo-tv.pages.dev/) na TV Samsung, com o nome "Mustache TV". O módulo é do
+tipo `mods` (`package.json` → `websiteURL`); o `atalho.js` existe só porque o TizenBrew exige um
+script e não altera o site.
 
-Até a v0.1.3 ele tocava a lista pública do iptv-org. Ela saiu na v0.2.0: muitos canais fora do ar
-e pouco conhecidos. O código ainda guarda uma tela inicial com atalhos de apps
-(`app/apps.json`), desligada: o Tizen não deixa um app substituir o botão Home da Samsung.
+**Histórico:** até a v0.2.0 o Mustache TV era um player próprio (pasta `app/`), primeiro com a
+lista pública do iptv-org e depois com links de `app/meus-canais.json`. Esse código continua no
+repositório, desligado; para voltar a ele, o `package.json` precisa voltar a `"packageType": "app"`
+com `"appPath": "app/index.html"` (ver a tag `v0.2.0`).
 
 É um módulo do [TizenBrew](https://github.com/reisxd/TizenBrew).
 
