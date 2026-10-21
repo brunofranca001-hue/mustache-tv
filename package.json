@@ -1,11 +1,10 @@
 {
   "name": "mustache-tv",
   "appName": "Mustache TV",
-  "version": "1.0.0",
-  "description": "Mustache TV: atalho do TizenBrew que abre o Saimo TV na TV Samsung.",
-  "packageType": "mods",
-  "websiteURL": "https://saimo-tv.pages.dev/",
-  "main": "atalho.js",
+  "version": "1.1.0",
+  "description": "Mustache TV: moldura com o Saimo TV dentro, para TVs Samsung (módulo do TizenBrew).",
+  "packageType": "app",
+  "appPath": "app/saimo.html",
   "keys": [
     "MediaPlayPause",
     "MediaPlay",

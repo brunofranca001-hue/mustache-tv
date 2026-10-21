@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920, height=1080">
+  <title>Mustache TV</title>
+  <style>
+    /* Moldura do Mustache TV com o Saimo TV dentro (iframe). Desenhada em 1920x1080.
+       Sem color-mix, ?. ou inset: o Chromium da TV é mais antigo que o do PC. */
+    @font-face { font-family: "Inter"; font-weight: 600; font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-600-normal.woff2") format("woff2"); }
+    @font-face { font-family: "Inter"; font-weight: 800; font-display: swap;
+      src: url("https://cdn.jsdelivr.net/npm/@fontsource/inter@5.1.0/files/inter-latin-800-normal.woff2") format("woff2"); }
+
+    :root {
+      --creme: #f3e3c3;
+      --cafe: #2b1810;
+      --cafe-escuro: #140b07;
+      --texto-2: rgba(243, 227, 195, 0.7);
+      --topo: 84px;
+      --margem: 28px;
+      --raio: 22px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 1920px; height: 1080px; overflow: hidden; cursor: none;
+      background: radial-gradient(120% 90% at 50% 0%, #4a2a18 0%, var(--cafe) 45%, var(--cafe-escuro) 100%);
+      color: var(--creme);
+      font-family: "Inter", "SamsungOne", -apple-system, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #topo { height: var(--topo); padding: 0 calc(var(--margem) + 14px);
+      display: flex; align-items: center; justify-content: space-between; }
+    #marca { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 800; letter-spacing: -0.5px; }
+    #marca svg { width: 72px; height: 27px; fill: var(--creme); }
+    #relogio { font-size: 30px; font-weight: 600; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+
+    #janela {
+      position: absolute; left: var(--margem); right: var(--margem); top: var(--topo); bottom: var(--margem);
+      border-radius: var(--raio); overflow: hidden; background: #0a0a0a;
+      box-shadow: 0 0 0 2px rgba(243, 227, 195, 0.14), 0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+    #saimo { width: 100%; height: 100%; border: 0; display: block; background: #0a0a0a; }
+
+    /* Enquanto o Saimo carrega (ou se falhar), uma cortina com o bigode cobre a janela. */
+    #cortina {
+      position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+      background: #0a0a0a; transition: opacity 500ms ease;
+    }
+    #cortina svg { width: 180px; height: 66px; fill: var(--creme); animation: respira 1.6s ease-in-out infinite; }
+    #cortina p { font-size: 28px; font-weight: 600; color: var(--texto-2); text-align: center; line-height: 1.4; white-space: pre-line; }
+    #cortina.some { opacity: 0; pointer-events: none; }
+    #cortina.erro svg { animation: none; opacity: 0.5; }
+    @keyframes respira { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="bigode" viewBox="0 0 120 44">
+      <path d="M60 15C53 5 40 2 29 9 21 14 15 24 6 22 3 21 1 23 2.5 26 10 36 27 39 40 33 48 29 55 25 60 25s12 4 20 8c13 6 30 3 37.5-7 1.5-3-.5-5-3.5-4-9 2-15-8-23-13C80 2 67 5 60 15Z"/>
+    </symbol>
+  </svg>
+
+  <header id="topo">
+    <div id="marca"><svg><use href="#bigode"></use></svg><span>Mustache TV</span></div>
+    <div id="relogio">--:--</div>
+  </header>
+
+  <div id="janela">
+    <iframe id="saimo" title="Saimo TV" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    <div id="cortina"><svg><use href="#bigode"></use></svg><p id="cortina-texto">Abrindo o Saimo TV…</p></div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+      var SAIMO = 'https://saimo-tv.pages.dev/';
+      var ESPERA_MS = 25000;
+      var frame = document.getElementById('saimo');
+      var cortina = document.getElementById('cortina');
+
+      function relogio() {
+        var d = new Date();
+        document.getElementById('relogio').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+      }
+      relogio(); setInterval(relogio, 15000);
+
+      // O controle remoto manda as teclas para quem tem o foco: o Saimo só recebe as setas e o OK
+      // se o iframe estiver focado. Por isso o foco vai para ele ao carregar e sempre que escapar.
+      function focarSaimo() { try { frame.focus(); frame.contentWindow.focus(); } catch (err) {} }
+
+      var prazo = setTimeout(function () {
+        cortina.classList.add('erro');
+        document.getElementById('cortina-texto').textContent = 'Não consegui abrir o Saimo TV.\nConfira a internet e abra o Mustache TV de novo.';
+      }, ESPERA_MS);
+
+      frame.addEventListener('load', function () {
+        clearTimeout(prazo);
+        cortina.classList.add('some');
+        focarSaimo();
+      });
+      // Tecla chegou aqui fora = o foco saiu do Saimo; devolve.
+      document.addEventListener('keydown', focarSaimo);
+      window.addEventListener('focus', focarSaimo);
+
+      // Teclas de mídia e de canal: registradas para a TV entregá-las à página.
+      if (window.tizen && tizen.tvinputdevice) {
+        ['MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop', 'MediaFastForward', 'MediaRewind', 'ChannelUp', 'ChannelDown']
+          .forEach(function (k) { try { tizen.tvinputdevice.registerKey(k); } catch (err) {} });
+      }
+
+      frame.src = SAIMO;
+    })();
+  </script>
+</body>
+</html>

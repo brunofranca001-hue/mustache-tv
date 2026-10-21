@@ -1,9 +1,9 @@
 # Mustache TV
 
-Desde a **v1.0.0**, o Mustache TV é um atalho do TizenBrew: abre o site
-[Saimo TV](https://saimo-tv.pages.dev/) na TV Samsung, com o nome "Mustache TV". O módulo é do
-tipo `mods` (`package.json` → `websiteURL`); o `atalho.js` existe só porque o TizenBrew exige um
-script e não altera o site.
+Desde a **v1.1.0**, o Mustache TV é uma **moldura**: abre com a faixa do Mustache TV no topo
+(bigode, nome e relógio) e o site [Saimo TV](https://saimo-tv.pages.dev/) dentro dela, num
+`iframe` (`app/saimo.html`). O foco do controle vai para o Saimo ao carregar; Home sai do app.
+Na v1.0.0 ele abria o Saimo direto, sem moldura.
 
 **Histórico:** até a v0.2.0 o Mustache TV era um player próprio (pasta `app/`), primeiro com a
 lista pública do iptv-org e depois com links de `app/meus-canais.json`. Esse código continua no
