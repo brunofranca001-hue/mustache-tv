@@ -12,6 +12,16 @@ com `"appPath": "app/index.html"` (ver a tag `v0.2.0`).
 
 É um módulo do [TizenBrew](https://github.com/reisxd/TizenBrew).
 
+## App próprio na barra da Samsung (sem TizenBrew)
+
+Além do módulo, há um app Tizen independente (`tizen-app/`), com ícone do bigode, que abre a mesma
+moldura. `node dev/empacotar-wgt.mjs` gera `ferramentas/MustacheTV.wgt`; publique-o como release
+(`gh release create app-tv-X.Y.Z ferramentas/MustacheTV.wgt`) e instale pelo TizenBrew Installer em
+**Install from GitHub** → `brunofranca001-hue/mustache-tv`, com o *Host PC IP* da TV apontando para o PC.
+
+Não use **Select file to install**: na v1.1.3 do instalador esse caminho apaga o certificado Samsung
+salvo logo depois de usá-lo (falta um `break` no código), e cada tentativa pede login de novo.
+
 ## Instalar na TV
 
 1. **Modo Desenvolvedor:** na TV, abra *Apps*, digite `12345` no controle, ligue o
