@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- App Tizen independente do Mustache TV: ícone próprio na barra da Samsung, sem passar pelo TizenBrew.
+     Empacotar: node dev/empacotar-wgt.mjs  ->  ferramentas/MustacheTV.wgt
+     Instalar: TizenBrew Installer -> "Select file to install" (ele assina com o certificado Samsung). -->
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets"
+        id="https://github.com/brunofranca001-hue/mustache-tv" version="1.0.0" viewmodes="maximized">
+  <tizen:application id="mustacheTV.MustacheTV" package="mustacheTV" required_version="3.0"/>
+  <name>Mustache TV</name>
+  <icon src="icon.png"/>
+  <content src="index.html"/>
+  <author href="https://github.com/brunofranca001-hue">Bruno França</author>
+  <description>Mustache TV: filmes, séries e canais na sua TV.</description>
+
+  <!-- O conteúdo vem da internet (o site exibido na moldura e a fonte). -->
+  <access origin="*" subdomains="true"/>
+  <tizen:allow-navigation>*</tizen:allow-navigation>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+
+  <tizen:profile name="tv-samsung"/>
+  <feature name="http://tizen.org/feature/screen.size.all"/>
+  <tizen:setting screen-orientation="landscape" context-menu="disable" background-support="disable"
+                 encryption="disable" install-location="auto" hwkey-event="enable"/>
+</widget>
