@@ -14,4 +14,4 @@ http.createServer((req, res) => {
   if (!arquivo.startsWith(raiz) || !fs.existsSync(arquivo)) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { 'Content-Type': (tipos[path.extname(arquivo)] || 'application/octet-stream') + '; charset=utf-8' });
   fs.createReadStream(arquivo).pipe(res);
-}).listen(5173, () => console.log('Tela inicial em http://localhost:5173'));
+}).listen(process.env.PORT || 5173, function () { console.log('Tela inicial em http://localhost:' + this.address().port); });

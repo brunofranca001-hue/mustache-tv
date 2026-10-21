@@ -3,3 +3,7 @@
 .impeccable/hook.cache.json
 tela-inicio/
 node_modules/
+
+# Instaladores baixados (não versionar executáveis)
+ferramentas/
+dev/.tv-token

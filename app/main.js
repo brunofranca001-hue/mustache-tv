@@ -144,6 +144,7 @@
     var porGrupo = {};
     estado.canais.forEach(function (c) { (porGrupo[c.grupo] = porGrupo[c.grupo] || []).push(c); });
     var trilhas = [];
+    if (estado.recentes.length) trilhas.push({ titulo: 'Assistidos há pouco', icone: 'ic-historico', tipo: 'canal', itens: estado.recentes, recentes: true });
     CATEGORIAS.concat([['', 'Outros']]).forEach(function (par) {
       var itens = porGrupo[par[1]];
       if (itens) trilhas.push({ titulo: par[1], icone: 'ic-radio', tipo: 'canal', itens: itens });
@@ -351,19 +352,30 @@
 
     var v = $('video');
     var foraDoAr = function () { clearTimeout(timerCanal); status('Fora do ar agora. Use ▲ ▼ para trocar de canal', false); };
+    var aindaEste = function () { return estado.tocando && estado.tocando.trilha.itens[estado.tocando.indice] === canal; };
     timerCanal = setTimeout(foraDoAr, ESPERA_CANAL_MS);
     v.onplaying = function () { clearTimeout(timerCanal); lembrar(canal); status(canal.grupo + ' · ao vivo', true); };
-    v.onerror = foraDoAr;
 
-    // A TV toca HLS (.m3u8) sozinha; o PC precisa do hls.js.
-    if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    // Na TV, o player nativo da Samsung toca .m3u8 direto e não depende de CORS; mas o navegador
+    // do TizenBrew pode responder "não sei" no canPlayType mesmo sabendo. Então, na TV, nativo sempre
+    // primeiro; o hls.js (que exige CORS de cada canal) fica de reserva para o PC ou se o nativo falhar.
+    var naTV = /Tizen|SMART-TV/i.test(navigator.userAgent);
+    if (naTV || v.canPlayType('application/vnd.apple.mpegurl')) {
+      v.onerror = function () { if (aindaEste()) tocarComHlsJs(v, canal, aindaEste, foraDoAr); };
       v.src = canal.url;
       v.play().catch(function () {});
       return;
     }
+    v.onerror = foraDoAr;
+    tocarComHlsJs(v, canal, aindaEste, foraDoAr);
+  }
+
+  function tocarComHlsJs(v, canal, aindaEste, foraDoAr) {
+    v.onerror = foraDoAr;
     carregarHlsJs().then(function (Hls) {
-      if (!estado.tocando || estado.tocando.trilha.itens[estado.tocando.indice] !== canal) return;
-      if (!Hls.isSupported()) { v.src = canal.url; return; }
+      if (!aindaEste()) return;
+      if (!Hls.isSupported()) { foraDoAr(); return; }
+      if (hls) { hls.destroy(); hls = null; }
       hls = new Hls();
       hls.on(Hls.Events.ERROR, function (_, d) { if (d.fatal) foraDoAr(); });
       hls.loadSource(canal.url);
@@ -390,8 +402,14 @@
       var r = tela.trilhas.length - 1;
       if (ultimo.trilha.recentes || tela.trilhas[r].recentes) { tela.linha = r; tela.colunas[r] = 0; }
     } else {
-      var i = tela.trilhas.indexOf(ultimo.trilha);
-      if (i >= 0) { tela.linha = i; tela.colunas[i] = ultimo.indice; }
+      // Remonta para a trilha "Assistidos há pouco" incluir o canal visto; o foco volta ao canal que tocava.
+      var titulo = ultimo.trilha.titulo;
+      montarMustache();
+      for (var i = 0; i < tela.trilhas.length; i++) {
+        if (tela.trilhas[i].titulo !== titulo) continue;
+        tela.linha = i;
+        tela.colunas[i] = ultimo.trilha.recentes ? 0 : ultimo.indice;
+      }
     }
     desenhar();
   }
@@ -430,9 +448,9 @@
       return;
     } else if (tem(TECLA.voltar, k)) {
       ev.preventDefault();
-      // No Mustache TV, voltar leva ao início com o foco no ícone dele; no início, sobe para os apps.
-      if (estado.tela === 'mustache') { estado.telas.inicio.linha = 0; estado.telas.inicio.colunas[0] = 0; irPara('inicio'); }
-      else { tela.linha = 0; focar(); }
+      // Voltar sobe para a primeira trilha; já nela, fecha o app (volta para a tela da Samsung).
+      if (tela.linha > 0) { tela.linha = 0; focar(); return; }
+      try { tizen.application.getCurrentApplication().exit(); } catch (err) { history.back(); }
       return;
     } else return;
     ev.preventDefault();
@@ -448,13 +466,15 @@
 
     fetch('apps.json')
       .then(function (r) { return r.json(); })
-      .then(function (j) { estado.apps = j.apps; irPara('inicio'); })
-      .catch(function () { irPara('inicio'); avisar('Não consegui ler a lista de apps.'); });
+      .then(function (j) { estado.apps = j.apps; })
+      .catch(function () {});
 
+    // O módulo é só o app de canais: abre direto no Mustache TV.
+    irPara('mustache');
     buscarCanais()
       .then(function (c) { estado.canais = c; })
       .catch(function () { estado.erroCanais = 'Não consegui baixar a lista de canais. Confira a internet e abra de novo.'; })
-      .then(function () { if (!estado.tocando) { if (estado.tela === 'mustache') montarMustache(); if (estado.telas.inicio.trilhas.length) desenhar(); } });
+      .then(function () { if (!estado.tocando) irPara('mustache'); });
   }
 
   iniciar();

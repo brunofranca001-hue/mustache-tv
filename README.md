@@ -1,8 +1,11 @@
 # Mustache TV
 
-Tela inicial limpa para TVs Samsung (Tizen), no estilo dos launchers de Android TV:
-fundo de paisagem, banners com o logo de cada app e o **Mustache TV**, um app interno
-com os canais abertos brasileiros da lista pública [iptv-org](https://github.com/iptv-org/iptv).
+App de canais abertos brasileiros ao vivo para TVs Samsung (Tizen), com os canais da lista
+pública [iptv-org](https://github.com/iptv-org/iptv) em trilhas por categoria, fundo de
+paisagem e a trilha "Assistidos há pouco". Use ▲ ▼ ou CH+/CH− para trocar de canal.
+
+O código ainda guarda uma tela inicial com atalhos de apps (`app/apps.json`), desligada desde
+a v0.1.1: o Tizen não deixa um app substituir o botão Home da Samsung.
 
 É um módulo do [TizenBrew](https://github.com/reisxd/TizenBrew).
 
@@ -12,6 +15,10 @@ com os canais abertos brasileiros da lista pública [iptv-org](https://github.co
    *Developer mode*, informe o IP do PC e reinicie a TV.
 2. **TizenBrew:** instale pelo [TizenBrew Installer](https://github.com/reisxd/TizenBrewInstaller/releases/latest).
    Em TVs com Tizen 7 ou mais novo, ele pede login na conta Samsung.
+   Depois de instalar, volte ao `12345` e troque o *Host PC IP* para `127.0.0.1`, depois
+   reinicie segurando o botão liga/desliga. O TizenBrew usa o modo desenvolvedor de dentro
+   da própria TV. Para reinstalar ou renovar o certificado no futuro, volte o IP para o do PC,
+   use o instalador e retorne para `127.0.0.1`.
 3. **Este módulo:** no TizenBrew, abra o gerenciador de módulos e adicione
    `gh/brunofranca001-hue/mustache-tv`.
 4. **Abrir sozinho:** nas configurações do TizenBrew, marque o Mustache TV para abrir

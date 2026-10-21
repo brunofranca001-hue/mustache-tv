@@ -1,8 +1,8 @@
 {
   "name": "mustache-tv",
   "appName": "Mustache TV",
-  "version": "0.1.0",
-  "description": "Tela inicial limpa, estilo Apple TV, com atalhos de apps e canais abertos (iptv-org).",
+  "version": "0.1.1",
+  "description": "Canais abertos brasileiros ao vivo (lista iptv-org) para TVs Samsung, como módulo do TizenBrew.",
   "packageType": "app",
   "appPath": "app/index.html",
   "serviceFile": "service/service.js",
