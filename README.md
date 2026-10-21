@@ -24,9 +24,19 @@ com os canais abertos brasileiros da lista pública [iptv-org](https://github.co
 | `app/apps.json` | Quais apps aparecem, a ordem, as cores e o `appId` de cada um |
 | `app/fundos.json` | As fotos de fundo (link ou arquivo em `app/fundos/`) e o tempo de troca |
 
-Depois de mudar, envie para o GitHub. O TizenBrew busca a versão nova pelo jsDelivr,
-que guarda cópia por até 12 horas: para ver na hora, abra
-`https://purge.jsdelivr.net/gh/brunofranca001-hue/mustache-tv@main/<arquivo>`.
+Depois de mudar, a TV só vê a mudança quando ela ganha uma **versão nova (tag)**:
+o TizenBrew pede o módulo sem dizer a versão, e o jsDelivr responde com a última tag,
+não com o último commit.
+
+```bash
+git commit -am "Troca as fotos de fundo"
+git tag -a v0.1.1 -m "Mustache TV 0.1.1"
+git push --follow-tags
+```
+
+O jsDelivr guarda cópia por até 12 horas. Para a TV ver na hora, abra no navegador
+`https://purge.jsdelivr.net/gh/brunofranca001-hue/mustache-tv/<arquivo>` para cada
+arquivo alterado e reabra o módulo.
 
 ## Testar no PC
 
