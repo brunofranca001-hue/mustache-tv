@@ -351,9 +351,23 @@
     status('Sintonizando · ' + (indice + 1) + ' de ' + trilha.itens.length + ' em ' + (trilha.titulo), false);
 
     var v = $('video');
-    var foraDoAr = function () { clearTimeout(timerCanal); status('Fora do ar agora. Use ▲ ▼ para trocar de canal', false); };
+    // Diagnóstico: cada tentativa registra o que aconteceu; quando o canal falha, isso aparece na tela
+    // para dar para fotografar (o navegador da TV não tem console acessível do PC).
+    var diag = ['tv=' + (/Tizen/i.test(navigator.userAgent) ? 'sim' : 'não'),
+      'hls=' + (v.canPlayType('application/vnd.apple.mpegurl') || 'vazio'),
+      (canal.url.indexOf('https:') === 0 ? 'https' : 'http')];
+    var erroVideo = function () {
+      var e = v.error;
+      return e ? 'video.error=' + e.code + (e.message ? ' ' + e.message.slice(0, 60) : '') : 'sem video.error';
+    };
+    var foraDoAr = function (motivo) {
+      clearTimeout(timerCanal);
+      if (motivo) diag.push(motivo);
+      status('Fora do ar · ' + diag.join(' · '), false);
+      clearTimeout(timerInfo); // deixa o diagnóstico na tela
+    };
     var aindaEste = function () { return estado.tocando && estado.tocando.trilha.itens[estado.tocando.indice] === canal; };
-    timerCanal = setTimeout(foraDoAr, ESPERA_CANAL_MS);
+    timerCanal = setTimeout(function () { foraDoAr('tempo esgotado (' + (ESPERA_CANAL_MS / 1000) + 's) readyState=' + v.readyState); }, ESPERA_CANAL_MS);
     v.onplaying = function () { clearTimeout(timerCanal); lembrar(canal); status(canal.grupo + ' · ao vivo', true); };
 
     // Na TV, o player nativo da Samsung toca .m3u8 direto e não depende de CORS; mas o navegador
@@ -361,27 +375,28 @@
     // primeiro; o hls.js (que exige CORS de cada canal) fica de reserva para o PC ou se o nativo falhar.
     var naTV = /Tizen|SMART-TV/i.test(navigator.userAgent);
     if (naTV || v.canPlayType('application/vnd.apple.mpegurl')) {
-      v.onerror = function () { if (aindaEste()) tocarComHlsJs(v, canal, aindaEste, foraDoAr); };
+      diag.push('nativo');
+      v.onerror = function () { diag.push('nativo falhou: ' + erroVideo()); if (aindaEste()) tocarComHlsJs(v, canal, aindaEste, foraDoAr, diag); };
       v.src = canal.url;
-      v.play().catch(function () {});
+      v.play().catch(function (e) { diag.push('play(): ' + (e && e.name)); });
       return;
     }
-    v.onerror = foraDoAr;
-    tocarComHlsJs(v, canal, aindaEste, foraDoAr);
+    tocarComHlsJs(v, canal, aindaEste, foraDoAr, diag);
   }
 
-  function tocarComHlsJs(v, canal, aindaEste, foraDoAr) {
-    v.onerror = foraDoAr;
+  function tocarComHlsJs(v, canal, aindaEste, foraDoAr, diag) {
+    diag.push('hls.js');
+    v.onerror = function () { foraDoAr('erro no vídeo (hls.js)'); };
     carregarHlsJs().then(function (Hls) {
       if (!aindaEste()) return;
-      if (!Hls.isSupported()) { foraDoAr(); return; }
+      if (!Hls.isSupported()) { foraDoAr('hls.js sem suporte (MSE)'); return; }
       if (hls) { hls.destroy(); hls = null; }
       hls = new Hls();
-      hls.on(Hls.Events.ERROR, function (_, d) { if (d.fatal) foraDoAr(); });
+      hls.on(Hls.Events.ERROR, function (_, d) { if (d.fatal) foraDoAr('hls ' + d.type + '/' + d.details + (d.response ? ' http=' + d.response.code : '')); });
       hls.loadSource(canal.url);
       hls.attachMedia(v);
       v.play().catch(function () {});
-    }).catch(function () { status('Não consegui carregar o player. Confira a internet.', false); });
+    }).catch(function () { foraDoAr('não baixou o hls.js'); });
   }
 
   function trocarCanal(passo) {
