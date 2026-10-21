@@ -1,8 +1,8 @@
 {
   "name": "mustache-tv",
   "appName": "Mustache TV",
-  "version": "0.1.3",
-  "description": "Canais abertos brasileiros ao vivo (lista iptv-org) para TVs Samsung, como módulo do TizenBrew.",
+  "version": "0.2.0",
+  "description": "Toca os seus próprios streams e vídeos (lista em app/meus-canais.json) em TVs Samsung, como módulo do TizenBrew.",
   "packageType": "app",
   "appPath": "app/index.html",
   "serviceFile": "service/service.js",

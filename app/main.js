@@ -1,25 +1,17 @@
-// Tela inicial estilo Apple TV para Samsung Tizen (módulo do TizenBrew).
-// Duas telas: "inicio" (apps + últimos canais) e "mustache" (o app interno Mustache TV, com os canais).
+// Mustache TV: app de canais para Samsung Tizen (módulo do TizenBrew).
+// Toca só os links de app/meus-canais.json. A tela "inicio" (atalhos de apps) segue no código, desligada.
 // Escrito sem `?.` e `??`: o navegador da TV é um Chromium mais antigo que o do PC.
 (function () {
   'use strict';
 
-  var LISTA_CANAIS = 'https://iptv-org.github.io/iptv/countries/br.m3u';
+  // Os canais vêm só de app/meus-canais.json: links avulsos ("canais") e listas .m3u ("listas").
+  var MEUS_CANAIS = 'meus-canais.json';
+  var GRUPO_PADRAO = 'Meus canais';
   var HLS_JS = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js';
   var ICONES = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
   var SERVICO = 'http://127.0.0.1:8086';
-  var CACHE_HORAS = 12;
   var ESPERA_CANAL_MS = 15000;
   var MAX_RECENTES = 12;
-
-  // Ordem e nomes em português das categorias da lista iptv-org.
-  var CATEGORIAS = [
-    ['General', 'Abertos'], ['News', 'Notícias'], ['Entertainment', 'Entretenimento'],
-    ['Movies', 'Filmes'], ['Series', 'Séries'], ['Kids', 'Infantil'], ['Sports', 'Esportes'],
-    ['Music', 'Música'], ['Documentary', 'Documentários'], ['Education', 'Educação'],
-    ['Culture', 'Cultura'], ['Lifestyle', 'Estilo de vida'], ['Legislative', 'Legislativo'],
-    ['Religious', 'Religiosos']
-  ];
 
   var TECLA = {
     esquerda: [37], direita: [39], cima: [38], baixo: [40], ok: [13],
@@ -30,7 +22,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var estado = {
-    apps: [], canais: null, recentes: lerSalvo('recentes') || [],
+    apps: [], canais: null, recentes: lerSalvo('recentes-v2') || [],
     tela: 'inicio',
     telas: { inicio: { trilhas: [], linha: 0, colunas: [] }, mustache: { trilhas: [], linha: 0, colunas: [] } },
     tocando: null
@@ -88,22 +80,18 @@
     $('relogio').textContent = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
   }
 
-  // ---------------- Canais (iptv-org) ----------------
-  // Cada canal vem em duas linhas: "#EXTINF:-1 tvg-logo=".." group-title="..",Nome (720p) [Not 24/7]" e a URL.
-  function lerM3u(texto) {
+  // ---------------- Canais (app/meus-canais.json) ----------------
+  // Lista .m3u: cada item vem em duas linhas, "#EXTINF:-1 tvg-logo=".." group-title="..",Nome" e a URL.
+  function lerM3u(texto, grupoPadrao) {
     var canais = [], atual = null;
     texto.split(/\r?\n/).forEach(function (linha) {
       linha = linha.trim();
       if (linha.indexOf('#EXTINF') === 0) {
         var attr = function (n) { var m = linha.match(new RegExp(n + '="([^"]*)"')); return m ? m[1] : ''; };
-        var nomeBruto = linha.slice(linha.lastIndexOf(',') + 1);
-        var grupo = attr('group-title').split(';')[0] || 'Undefined';
         atual = {
-          nome: nomeBruto.replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim(),
+          nome: linha.slice(linha.lastIndexOf(',') + 1).trim(),
           logo: attr('tvg-logo'),
-          grupo: nomeDoGrupo(grupo),
-          grupoOriginal: grupo,
-          naoContinuo: /Not 24\/7/i.test(nomeBruto)
+          grupo: attr('group-title').split(';')[0] || grupoPadrao
         };
       } else if (linha && linha[0] !== '#' && atual) {
         atual.url = linha;
@@ -114,18 +102,24 @@
     return canais;
   }
 
-  function nomeDoGrupo(g) {
-    for (var i = 0; i < CATEGORIAS.length; i++) if (CATEGORIAS[i][0] === g) return CATEGORIAS[i][1];
-    return 'Outros';
-  }
-
+  // Sem cache: são os seus links, e uma mudança no arquivo deve aparecer ao reabrir o app.
   function buscarCanais() {
-    var cache = lerSalvo('canais-v2');
-    if (cache && Date.now() - cache.quando < CACHE_HORAS * 3600e3) return Promise.resolve(cache.canais);
-    return fetch(LISTA_CANAIS)
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
-      .then(function (t) { var c = lerM3u(t); guardar('canais-v2', { quando: Date.now(), canais: c }); return c; })
-      .catch(function (err) { if (cache) return cache.canais; throw err; });
+    return fetch(MEUS_CANAIS, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (cfg) {
+        var avulsos = (cfg.canais || []).filter(function (c) { return c && c.url; }).map(function (c) {
+          return { nome: c.nome || c.url, url: c.url, logo: c.logo || '', grupo: c.grupo || GRUPO_PADRAO };
+        });
+        // Uma lista fora do ar não derruba as outras: ela só fica de fora.
+        var listas = (cfg.listas || []).map(function (u) {
+          return fetch(u).then(function (r) { return r.ok ? r.text() : ''; })
+            .then(function (t) { return lerM3u(t, 'Minha lista'); })
+            .catch(function () { return []; });
+        });
+        return Promise.all(listas).then(function (doListas) {
+          return doListas.reduce(function (todos, l) { return todos.concat(l); }, avulsos);
+        });
+      });
   }
 
   // ---------------- Montagem das telas ----------------
@@ -138,17 +132,19 @@
   function montarMustache() {
     var tela = estado.telas.mustache;
     if (!estado.canais) {
-      tela.trilhas = [{ titulo: 'Canais', icone: 'ic-radio', tipo: 'canal', itens: [], vazio: estado.erroCanais || 'Carregando canais abertos…' }];
+      tela.trilhas = [{ titulo: GRUPO_PADRAO, icone: 'ic-radio', tipo: 'canal', itens: [], vazio: estado.erroCanais || 'Carregando seus canais…' }];
       return;
     }
-    var porGrupo = {};
-    estado.canais.forEach(function (c) { (porGrupo[c.grupo] = porGrupo[c.grupo] || []).push(c); });
+    // Uma trilha por grupo, na ordem em que aparecem no arquivo.
+    var porGrupo = {}, ordem = [];
+    estado.canais.forEach(function (c) {
+      if (!porGrupo[c.grupo]) { porGrupo[c.grupo] = []; ordem.push(c.grupo); }
+      porGrupo[c.grupo].push(c);
+    });
     var trilhas = [];
     if (estado.recentes.length) trilhas.push({ titulo: 'Assistidos há pouco', icone: 'ic-historico', tipo: 'canal', itens: estado.recentes, recentes: true });
-    CATEGORIAS.concat([['', 'Outros']]).forEach(function (par) {
-      var itens = porGrupo[par[1]];
-      if (itens) trilhas.push({ titulo: par[1], icone: 'ic-radio', tipo: 'canal', itens: itens });
-    });
+    ordem.forEach(function (g) { trilhas.push({ titulo: g, icone: 'ic-radio', tipo: 'canal', itens: porGrupo[g] }); });
+    if (!ordem.length) trilhas.push({ titulo: GRUPO_PADRAO, icone: 'ic-radio', tipo: 'canal', itens: [], vazio: 'Nenhum canal ainda. Coloque seus links em app/meus-canais.json.' });
     tela.trilhas = trilhas;
   }
 
@@ -199,7 +195,7 @@
         c.appendChild(desenho('bigode'));
         c.appendChild(el('span', '', 'MUSTACHE TV'));
         n.appendChild(c);
-        n.appendChild(rotulo(item.nome, estado.canais ? estado.canais.length + ' canais abertos ao vivo' : 'Canais abertos ao vivo'));
+        n.appendChild(rotulo(item.nome, 'Seus canais e vídeos'));
         return n;
       }
       n.appendChild(bannerDeApp(item));
@@ -218,7 +214,7 @@
       c.appendChild(el('span', '', item.nome));
     }
     n.appendChild(c);
-    n.appendChild(rotulo(item.nome, item.grupo + (item.naoContinuo ? ' · em alguns horários' : ' · ao vivo'), !item.naoContinuo));
+    n.appendChild(rotulo(item.nome, item.grupo));
     return n;
   }
 
@@ -338,7 +334,7 @@
 
   function lembrar(canal) {
     estado.recentes = [canal].concat(estado.recentes.filter(function (c) { return c.url !== canal.url; })).slice(0, MAX_RECENTES);
-    guardar('recentes', estado.recentes);
+    guardar('recentes-v2', estado.recentes);
   }
 
   function tocar(trilha, indice) {
@@ -368,7 +364,7 @@
     };
     var aindaEste = function () { return estado.tocando && estado.tocando.trilha.itens[estado.tocando.indice] === canal; };
     timerCanal = setTimeout(function () { foraDoAr('tempo esgotado (' + (ESPERA_CANAL_MS / 1000) + 's) readyState=' + v.readyState); }, ESPERA_CANAL_MS);
-    v.onplaying = function () { clearTimeout(timerCanal); lembrar(canal); status(canal.grupo + ' · ao vivo', true); };
+    v.onplaying = function () { clearTimeout(timerCanal); lembrar(canal); status(canal.grupo + ' · tocando', true); };
 
     // Na TV, o player nativo da Samsung toca .m3u8 direto e não depende de CORS; mas o navegador
     // do TizenBrew pode responder "não sei" no canPlayType mesmo sabendo. Então, na TV, nativo sempre

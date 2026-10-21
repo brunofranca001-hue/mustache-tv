@@ -1,11 +1,12 @@
 # Mustache TV
 
-App de canais abertos brasileiros ao vivo para TVs Samsung (Tizen), com os canais da lista
-pública [iptv-org](https://github.com/iptv-org/iptv) em trilhas por categoria, fundo de
-paisagem e a trilha "Assistidos há pouco". Use ▲ ▼ ou CH+/CH− para trocar de canal.
+App para TVs Samsung (Tizen) que toca **os seus próprios streams e vídeos**, listados em
+`app/meus-canais.json`, em trilhas por grupo, com fundo de paisagem e a trilha
+"Assistidos há pouco". Use ▲ ▼ ou CH+/CH− para trocar de canal.
 
-O código ainda guarda uma tela inicial com atalhos de apps (`app/apps.json`), desligada desde
-a v0.1.1: o Tizen não deixa um app substituir o botão Home da Samsung.
+Até a v0.1.3 ele tocava a lista pública do iptv-org. Ela saiu na v0.2.0: muitos canais fora do ar
+e pouco conhecidos. O código ainda guarda uma tela inicial com atalhos de apps
+(`app/apps.json`), desligada: o Tizen não deixa um app substituir o botão Home da Samsung.
 
 É um módulo do [TizenBrew](https://github.com/reisxd/TizenBrew).
 
@@ -28,8 +29,14 @@ a v0.1.1: o Tizen não deixa um app substituir o botão Home da Samsung.
 
 | Arquivo | O que muda |
 |---|---|
-| `app/apps.json` | Quais apps aparecem, a ordem, as cores e o `appId` de cada um |
+| `app/meus-canais.json` | Seus links: `canais` (um link direto `.m3u8`/`.mp4` por item, com `nome`, `grupo` e `logo` opcionais) e `listas` (endereços de listas `.m3u`) |
 | `app/fundos.json` | As fotos de fundo (link ou arquivo em `app/fundos/`) e o tempo de troca |
+
+O repositório é **público**: tudo em `meus-canais.json` fica visível para qualquer pessoa.
+Links que precisam ser privados não devem ir para esse arquivo.
+
+Funcionam melhor na TV: **HLS (`.m3u8`)** e **MP4 (H.264/AAC)**, sempre com o link **direto**
+do arquivo, não o de uma página que mostra o vídeo (YouTube, Drive e afins não servem).
 
 Depois de mudar, a TV só vê a mudança quando ela ganha uma **versão nova (tag)**:
 o TizenBrew pede o módulo sem dizer a versão, e o jsDelivr responde com a última tag,
@@ -64,6 +71,6 @@ Abra `http://localhost:5173` e use as setas, Enter e Esc como controle remoto.
 
 ## Créditos
 
-Canais: [iptv-org](https://github.com/iptv-org/iptv), apenas transmissões públicas e gratuitas.
+Vídeo de teste: [Mux test streams](https://test-streams.mux.dev).
 Logos: [Simple Icons](https://simpleicons.org) e Wikimedia Commons; as marcas pertencem aos donos.
 Fotos de fundo: [Unsplash](https://unsplash.com).

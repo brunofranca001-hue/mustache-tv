@@ -1,0 +1,11 @@
+{
+  "_leia": "Seus canais e vídeos. 'canais': um link direto por item (.m3u8 ou .mp4); 'grupo' e 'logo' são opcionais e cada grupo vira uma trilha. 'listas': endereços de listas .m3u, todos os itens delas entram. Este arquivo é PÚBLICO no GitHub: não coloque links que precisam ficar privados.",
+  "canais": [
+    {
+      "nome": "Teste do player",
+      "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      "grupo": "Teste"
+    }
+  ],
+  "listas": []
+}
