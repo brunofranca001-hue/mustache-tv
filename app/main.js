@@ -448,9 +448,11 @@
       return;
     } else if (tem(TECLA.voltar, k)) {
       ev.preventDefault();
-      // Voltar sobe para a primeira trilha; já nela, fecha o app (volta para a tela da Samsung).
+      // Voltar sobe para a primeira trilha; já nela, tenta fechar o app pela API da TV.
+      // Nunca usar history.back(): a página anterior é uma rota interna do TizenBrew
+      // (file:///tizenbrew-ui/dist/index.html/module-manager) que, recarregada sozinha, dá ERR_ACCESS_DENIED.
       if (tela.linha > 0) { tela.linha = 0; focar(); return; }
-      try { tizen.application.getCurrentApplication().exit(); } catch (err) { history.back(); }
+      try { tizen.application.getCurrentApplication().exit(); } catch (err) { avisar('Aperte Home para sair'); }
       return;
     } else return;
     ev.preventDefault();
