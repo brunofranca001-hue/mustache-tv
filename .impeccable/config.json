@@ -1,40 +1,13 @@
-﻿{
+{
   "detector": {
     "ignoreRules": [],
     "ignoreFiles": [],
     "ignoreValues": [
       {
-        "rule": "broken-image",
-        "value": "*",
-        "files": [
-          "app/index.html"
-        ],
-        "createdAt": "2026-10-21T16:19:38.650Z",
-        "reason": "Claude: os img sem src recebem o logo por JS e ficam escondidos por CSS (:not([src])) atÃ© lÃ¡"
-      },
-      {
-        "rule": "buried-raster",
-        "value": "*",
-        "files": [
-          "app/index.html"
-        ],
-        "createdAt": "2026-10-21T16:19:38.714Z",
-        "reason": "Claude: #fundo-img comeÃ§a em opacidade 0 e acende (0.16) quando um canal ganha foco"
-      },
-      {
-        "rule": "clipped-overflow-container",
-        "value": "*",
-        "files": [
-          "app/index.html"
-        ],
-        "createdAt": "2026-10-21T16:19:38.777Z",
-        "reason": "Claude: tela de TV fixa em 1920x1080; html/body/#fundo cortam de propÃ³sito, nÃ£o hÃ¡ menus ou popovers"
-      },
-      {
         "rule": "overused-font",
         "value": "inter",
-        "createdAt": "2026-10-21T16:19:38.843Z",
-        "reason": "Claude: briefing do usuÃ¡rio pede estilo Apple TV; Inter Ã© a face livre mais prÃ³xima da SF Pro"
+        "createdAt": "2026-10-21T19:08:39.738Z",
+        "reason": "Claude: mesma escolha já registrada antes (estilo Apple TV pedido pelo usuário; Inter é a face livre mais próxima da SF Pro); reaplicada após a mudança de pasta"
       }
     ]
   }

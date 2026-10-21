@@ -49,11 +49,18 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
       background: #0a0a0a; transition: opacity 500ms ease;
     }
-    #cortina svg { width: 180px; height: 66px; fill: var(--creme); animation: respira 1.6s ease-in-out infinite; }
+    #cortina svg { width: 200px; height: 74px; fill: var(--creme); transform-origin: 50% 40%;
+      animation: enrola 1.4s ease-in-out infinite; filter: drop-shadow(0 8px 18px rgba(0,0,0,.5)); }
     #cortina p { font-size: 28px; font-weight: 600; color: var(--texto-2); text-align: center; line-height: 1.4; white-space: pre-line; }
     #cortina.some { opacity: 0; pointer-events: none; }
     #cortina.erro svg { animation: none; opacity: 0.5; }
-    @keyframes respira { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+    /* O bigode balança de um lado para o outro, como quem enrola as pontas. */
+    @keyframes enrola {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      25% { transform: rotate(-8deg) scale(1.06); }
+      50% { transform: rotate(0deg) scale(1); }
+      75% { transform: rotate(8deg) scale(1.06); }
+    }
   </style>
 </head>
 <body>
@@ -69,8 +76,8 @@
   </header>
 
   <div id="janela">
-    <iframe id="saimo" title="Saimo TV" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-    <div id="cortina"><svg><use href="#bigode"></use></svg><p id="cortina-texto">Abrindo o Saimo TV…</p></div>
+    <iframe id="saimo" title="Mustache TV" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+    <div id="cortina"><svg><use href="#bigode"></use></svg><p id="cortina-texto">Carregando o Mustache TV…</p></div>
   </div>
 
   <script>
@@ -93,7 +100,7 @@
 
       var prazo = setTimeout(function () {
         cortina.classList.add('erro');
-        document.getElementById('cortina-texto').textContent = 'Não consegui abrir o Saimo TV.\nConfira a internet e abra o Mustache TV de novo.';
+        document.getElementById('cortina-texto').textContent = 'Não consegui carregar o Mustache TV.\nConfira a internet e abra de novo.';
       }, ESPERA_MS);
 
       frame.addEventListener('load', function () {
