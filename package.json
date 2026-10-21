@@ -1,8 +1,8 @@
 {
   "name": "mustache-tv",
   "appName": "Mustache TV",
-  "version": "1.1.1",
-  "description": "Mustache TV: moldura com o Saimo TV dentro, para TVs Samsung (módulo do TizenBrew).",
+  "version": "1.1.2",
+  "description": "Mustache TV: filmes, séries e canais na sua TV.",
   "packageType": "app",
   "appPath": "app/saimo.html",
   "keys": [
